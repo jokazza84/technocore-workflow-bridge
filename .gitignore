@@ -1,0 +1,8 @@
+/.venv/
+/build/
+/dist/
+/*.egg-info/
+/bridge-state.json
+__pycache__/
+*.py[cod]
+
