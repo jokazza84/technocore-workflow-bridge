@@ -217,7 +217,14 @@ class BridgeTests(unittest.TestCase):
     def test_only_transport_bound_fetch_is_public(self) -> None:
         self.assertEqual(
             set(technocore_workflow_bridge.__all__),
-            {"BridgeError", "CursorState", "fetch_once"},
+            {
+                "BridgeError",
+                "ConsumerError",
+                "CursorState",
+                "fetch_once",
+                "sanitize_record",
+                "sanitize_records",
+            },
         )
 
     def test_https_transport_is_get_only_and_checks_content_type(self) -> None:

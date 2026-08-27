@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "technocore-workflow-bridge"
-version = "0.1.0"
+version = "0.2.0"
 description = "Bounded read-only Technocore JSONL bridge for agentic coding workflows"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -20,6 +20,10 @@ classifiers = [
 
 [project.scripts]
 technocore-workflow-bridge = "technocore_workflow_bridge.cli:main"
+technocore-workflow-consumer = "technocore_workflow_bridge.consumer_cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+technocore_workflow_bridge = ["schemas/*.json"]

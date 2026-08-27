@@ -14,7 +14,12 @@ Verified offline against `technocore-chat` commit
 | `GET /patterns.md` is the official worked-patterns document | `README.md` line 47; `src/manifest.py` patterns route |
 | remote bytes are anonymous/untrusted data | `src/manifest.py` service trust description |
 
-The first candidate intentionally fixes the room allowlist to `lobby`. It does not expose
+Version 0.2.0 continues to fix the room allowlist to `lobby`. The new consumer validates
+only records already produced by these pinned read paths; it has no transport of its own.
+Its schema mirrors the closed room/message fields, integer bounds and gap metadata above.
+Display sanitization is a local defensive transformation and does not claim an upstream
+trust guarantee.
+
+The bridge does not expose
 the upstream write-shaped GET routes, POST routes, long-poll `wait`, arbitrary rooms,
 notes, MCP, WebMCP, `/skill.md` or legacy identity discovery.
-

@@ -24,6 +24,12 @@ PORT = 443
 TRUST = "UNTRUSTED_DATA"
 REMOTE_WRITES_ENABLED = False
 ALLOWED_ROOM = "lobby"
+LOBBY_CONTENT_TYPES = frozenset(
+    {"application/json", "application/json; charset=utf-8"}
+)
+PATTERNS_CONTENT_TYPES = frozenset(
+    {"text/plain", "text/plain; charset=utf-8"}
+)
 MAX_ROOM_LIMIT = 200
 # The pinned server scans a 1 MiB room tail. Allow bounded JSON framing above that raw ring slice.
 MAX_ROOM_BODY = (1 << 20) + (64 << 10)
@@ -233,7 +239,7 @@ def _decode_lobby(
         path_match is None
         or int(path_match.group(1)) != state.lobby_cursor
         or int(path_match.group(2)) > MAX_ROOM_LIMIT
-        or evidence.content_type.split(";", 1)[0].strip().lower() != "application/json"
+        or evidence.content_type not in LOBBY_CONTENT_TYPES
         or evidence.body_sha256 != hashlib.sha256(body).hexdigest()
     ):
         raise BridgeError("lobby evidence is not bound to the response bytes and cursor")
@@ -331,7 +337,7 @@ def _decode_patterns(body: bytes, evidence: _Evidence) -> dict[str, Any]:
         raise BridgeError("patterns response exceeds the byte bound")
     if (
         evidence.path != "/patterns.md"
-        or evidence.content_type.split(";", 1)[0].strip().lower() != "text/plain"
+        or evidence.content_type not in PATTERNS_CONTENT_TYPES
         or evidence.body_sha256 != hashlib.sha256(body).hexdigest()
     ):
         raise BridgeError("patterns evidence is not bound to the response bytes")
@@ -368,11 +374,11 @@ def _allowed_path(resource: str, cursor: int, limit: int) -> tuple[str, int]:
 
 def _https_get(path: str, maximum: int) -> tuple[bytes, _Evidence]:
     if path == "/patterns.md":
-        expected_media_type = "text/plain"
+        expected_content_types = PATTERNS_CONTENT_TYPES
     elif (match := ROOM_READ_PATH_RE.fullmatch(path)) is not None:
         if int(match.group(1)) > MAX_CURSOR or int(match.group(2)) > MAX_ROOM_LIMIT:
             raise BridgeError("transport path contains an out-of-range cursor or limit")
-        expected_media_type = "application/json"
+        expected_content_types = LOBBY_CONTENT_TYPES
     else:
         raise BridgeError("transport path is outside the closed read allowlist")
     connection = http.client.HTTPSConnection(
@@ -395,7 +401,7 @@ def _https_get(path: str, maximum: int) -> tuple[bytes, _Evidence]:
                 "Accept": "application/json, text/plain;q=0.9",
                 "Cache-Control": "no-cache",
                 "Connection": "close",
-                "User-Agent": "Technocore-Workflow-Bridge/0.1",
+                "User-Agent": "Technocore-Workflow-Bridge/0.2",
             },
         )
         response = connection.getresponse()
@@ -406,7 +412,7 @@ def _https_get(path: str, maximum: int) -> tuple[bytes, _Evidence]:
         content_type = response.getheader("Content-Type")
         if (
             type(content_type) is not str
-            or content_type.split(";", 1)[0].strip().lower() != expected_media_type
+            or content_type not in expected_content_types
         ):
             raise BridgeError("response Content-Type differs from the pinned route")
         length = response.getheader("Content-Length")

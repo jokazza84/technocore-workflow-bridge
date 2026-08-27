@@ -8,6 +8,7 @@ from pathlib import Path
 
 from . import __version__
 from .bridge import BridgeError, CursorState, fetch_once, jsonl
+from .consumer import ConsumerError, sanitize_records, save_sanitized
 
 
 def main() -> None:
@@ -18,7 +19,11 @@ def main() -> None:
     lobby = subcommands.add_parser("lobby")
     lobby.add_argument("--state", type=Path, required=True)
     lobby.add_argument("--limit", type=int, default=50)
-    subcommands.add_parser("patterns")
+    lobby.add_argument("--sanitized-output", type=Path)
+    lobby.add_argument("--replace-output", action="store_true")
+    patterns = subcommands.add_parser("patterns")
+    patterns.add_argument("--sanitized-output", type=Path)
+    patterns.add_argument("--replace-output", action="store_true")
     args = parser.parse_args()
     if not args.allow_network:
         raise SystemExit("network is disabled by default; review and pass --allow-network")
@@ -29,11 +34,17 @@ def main() -> None:
             state=state,
             limit=args.limit if args.resource == "lobby" else 50,
         )
-        sys.stdout.buffer.write(jsonl(records))
-        sys.stdout.buffer.flush()
+        if args.sanitized_output is not None:
+            sanitized = sanitize_records(records)
+            save_sanitized(args.sanitized_output, sanitized, replace=args.replace_output)
+        else:
+            if args.replace_output:
+                raise ConsumerError("--replace-output requires --sanitized-output")
+            sys.stdout.buffer.write(jsonl(records))
+            sys.stdout.buffer.flush()
         if updated is not None:
             updated.save(args.state)
-    except BridgeError as exc:
+    except (BridgeError, ConsumerError) as exc:
         raise SystemExit(str(exc)) from exc
 
 
